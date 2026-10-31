@@ -59,7 +59,7 @@ Real data goes in through the app's own Settings → Data → Restore, which run
 
 ## Auth
 
-Cloudflare Access sits in front of the whole Worker (pages and API). Because static assets put an internal router in front of the Worker, `ctx.access` is not passed through, so `worker/auth.js` verifies the `Cf-Access-Jwt-Assertion` JWT itself against the team's signing keys, checks issuer and audience, and then requires the email to be in `ALLOWED_EMAIL`. Anything missing fails closed: no configuration is a 503, no or bad token a 401, another email a 403. Service tokens reach `/api/health` only.
+Cloudflare Access sits in front of the whole Worker (pages and API). Because static assets put an internal router in front of the Worker, `ctx.access` is not passed through, so `worker/auth.js` verifies the `Cf-Access-Jwt-Assertion` JWT itself against the team's signing keys, checks issuer and audience, and then requires the email to be in `ALLOWED_EMAIL`. Anything missing fails closed: no configuration is a 503, a missing token (`access_missing`), a token that does not verify (`access_rejected`) or another email (`forbidden`) is a 403. The Worker never answers 401: only Access itself does, for an expired session, so a configuration mistake cannot send the page round the sign-in loop. Service tokens reach `/api/health` only. Opening `/api/health` in a signed-in browser shows which check failed.
 
 Locally, `DEV_EMAIL` stands in for Access, but only when `ENV` is not `prod` and the request is to `localhost` or `127.0.0.1`.
 

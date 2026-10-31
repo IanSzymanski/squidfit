@@ -33,7 +33,9 @@ function emit(l, value) {
 async function sessionGone() {
   try {
     const r = await fetch("/api/health", { headers: XHR, redirect: "manual", cache: "no-store", credentials: "same-origin" });
-    return r.type === "opaqueredirect" || r.status === 401;
+    if (r.type === "opaqueredirect" || r.status === 401) return true;
+    if (!r.ok) console.error("Squid sync unavailable:", r.status, await r.text().catch(() => ""));
+    return false;
   } catch (e) {
     return false;
   }

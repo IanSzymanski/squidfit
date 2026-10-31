@@ -20,10 +20,13 @@ The repo deploys from GitHub Actions on every push to `main` once Cloudflare cre
 
 1. **API token.** Cloudflare dashboard → My Profile → API Tokens → Create Token → template "Edit Cloudflare Workers", limited to your account. In GitHub → Settings → Secrets and variables → Actions, add `CLOUDFLARE_API_TOKEN` (the token) and `CLOUDFLARE_ACCOUNT_ID` (Workers & Pages → Account details).
 2. **First deploy.** GitHub → Actions → Deploy → Run workflow (or push to `main`). This creates the `squidfit` Worker at `https://squidfit.<your-subdomain>.workers.dev`. The API answers 503 until step 4 is done, so nothing is reachable yet.
-3. **Access.** Workers & Pages → squidfit → Settings → Domains & Routes → workers.dev → Enable Cloudflare Access. Under Manage Cloudflare Access, allow only your email, and set the session to one month. Add One-time PIN (and optionally Google) under Zero Trust → Settings → Authentication. Copy the application's AUD tag and your team name.
+3. **Access.** Workers & Pages → squidfit → Settings → Domains & Routes → workers.dev → Enable Cloudflare Access. Then:
+   - Add a login method you can use on a phone: Zero Trust → Settings → Authentication → Login methods → One-time PIN (optionally Google). Make sure the squidfit application offers it. The default "Cloudflare" method signs in with your Cloudflare dashboard account, under whatever email that account uses.
+   - Set the policy to Allow → Include → Emails → the exact address you will sign in with. "That account does not have access" on the Access page means the identity you signed in as is not in this policy.
+   - Set the session to one month, and copy the application's AUD tag.
 4. **Worker secrets** (Workers & Pages → squidfit → Settings → Variables and Secrets, type Secret), or `npx wrangler secret put NAME`:
-   - `ALLOWED_EMAIL`: your email (comma-separate to allow more than one)
-   - `ACCESS_TEAM_DOMAIN`: your Zero Trust team name, e.g. `myteam` (or the full `https://myteam.cloudflareaccess.com`)
+   - `ALLOWED_EMAIL`: the same address as the Access policy (comma-separate to allow more than one)
+   - `ACCESS_TEAM_DOMAIN`: your current Zero Trust team name, which is the host of the Access sign-in page (`<team>.cloudflareaccess.com`). If you renamed the team, use the new name.
    - `ACCESS_AUD`: the AUD tag from step 3
    - `ANTHROPIC_API_KEY`: a key from the Anthropic Console, ideally in its own workspace with a monthly spend limit. Without it the AI features stay hidden.
 5. **Move your data.** Open the Worker URL, sign in, skip onboarding, then Settings → Data → Restore a Squid backup → choose your Full backup → Replace everything.

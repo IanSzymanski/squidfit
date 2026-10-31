@@ -73,22 +73,28 @@ describe("Access identity", () => {
   });
 
   it("refuses other emails, wrong audiences, other issuers and expired tokens", async () => {
-    expect((await identify(req(await sign({ email: "else@example.com" })), env, keys)).status).toBe(403);
-    expect((await identify(req(await sign({ email: "owner@example.com" }, { aud: "other" })), env, keys)).status).toBe(401);
-    expect((await identify(req(await sign({ email: "owner@example.com" }, { iss: "https://evil.cloudflareaccess.com" })), env, keys)).status).toBe(401);
-    expect((await identify(req(await sign({ email: "owner@example.com" }, { exp: Math.floor(Date.now() / 1000) - 60 })), env, keys)).status).toBe(401);
+    expect((await identify(req(await sign({ email: "else@example.com" })), env, keys))).toMatchObject({ status: 403, code: "forbidden" });
+    expect((await identify(req(await sign({ email: "owner@example.com" }, { aud: "other" })), env, keys))).toMatchObject({ status: 403, code: "access_rejected" });
+    expect((await identify(req(await sign({ email: "owner@example.com" }, { iss: "https://evil.cloudflareaccess.com" })), env, keys))).toMatchObject({ status: 403, code: "access_rejected" });
+    expect((await identify(req(await sign({ email: "owner@example.com" }, { exp: Math.floor(Date.now() / 1000) - 60 })), env, keys))).toMatchObject({ status: 403, code: "access_rejected" });
   });
 
   it("fails closed with no token or no configuration", async () => {
-    expect((await identify(req(null), env, keys)).status).toBe(401);
+    expect((await identify(req(null), env, keys))).toMatchObject({ status: 403, code: "access_missing" });
     expect((await identify(req(await sign({ email: "owner@example.com" })), { ENV: "prod" }, keys)).status).toBe(503);
+  });
+
+  it("never answers 401, so a misconfigured Worker cannot look like an expired session and loop the page through sign-in", async () => {
+    const bad = [req(null), req(await sign({ email: "owner@example.com" }, { aud: "other" })), req(await sign({ email: "else@example.com" }))];
+    for (const r of bad) expect((await identify(r, env, keys)).status).not.toBe(401);
+    expect((await identify(req(await sign({ email: "owner@example.com" })), { ...env, ACCESS_TEAM_DOMAIN: "renamed-team" }, keys)).status).not.toBe(401);
   });
 
   it("never honours the local dev identity in production or off localhost", async () => {
     const local = new Request("http://localhost/api/health");
     expect(await identify(local, { ENV: "qa", DEV_EMAIL: "dev@example.com" })).toEqual({ email: "dev@example.com" });
-    expect((await identify(local, { ...env, DEV_EMAIL: "dev@example.com" }, keys)).status).toBe(401);
-    expect((await identify(req(null), { ...env, ENV: "qa", DEV_EMAIL: "dev@example.com" }, keys)).status).toBe(401);
+    expect((await identify(local, { ...env, DEV_EMAIL: "dev@example.com" }, keys)).status).toBe(403);
+    expect((await identify(req(null), { ...env, ENV: "qa", DEV_EMAIL: "dev@example.com" }, keys)).status).toBe(403);
   });
 
   it("treats a service token as health-only", async () => {
