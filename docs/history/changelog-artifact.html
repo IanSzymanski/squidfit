@@ -1,0 +1,585 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Squid Changelog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;450;500;600&display=swap">
+<style>
+/* Squid's own vernacular: tabular figures, macro-token hues, plan marks that
+   carry colour and shape together. The version numbers are the structure. */
+:root{
+  --ground:#F5F7F6;
+  --surface:#FFFFFF;
+  --ink:#14181A;
+  --ink-2:#4A5354;
+  --ink-3:#6E7978;
+  --rule:#DEE3E1;
+  --rule-soft:#EAEEEC;
+  --accent:#0A7A48;
+  --accent-soft:#E3F0E9;
+  --area-food:#1F6FEB;
+  --area-body:#A97B0A;
+  --area-strength:#96150E;
+  --area-core:#5B6768;
+  --good:#0A7A48;
+  --bad:#B3392E;
+  --shadow:0 1px 2px rgba(20,24,26,.05);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#0F1413;--surface:#171D1B;--ink:#E9EEEC;--ink-2:#A7B1AF;--ink-3:#85908E;
+    --rule:#2A322F;--rule-soft:#212826;--accent:#35C98D;--accent-soft:#15302A;
+    --area-food:#4A82FF;--area-body:#D3A02A;--area-strength:#D4574B;--area-core:#8A9694;
+    --good:#35C98D;--bad:#E0705F;--shadow:0 1px 2px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0F1413;--surface:#171D1B;--ink:#E9EEEC;--ink-2:#A7B1AF;--ink-3:#85908E;
+  --rule:#2A322F;--rule-soft:#212826;--accent:#35C98D;--accent-soft:#15302A;
+  --area-food:#4A82FF;--area-body:#D3A02A;--area-strength:#D4574B;--area-core:#8A9694;
+  --good:#35C98D;--bad:#E0705F;--shadow:0 1px 2px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--ground);color:var(--ink);
+  font:400 16px/1.55 "IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+.page{max-width:840px;margin:0 auto;padding-block:40px 72px;padding-left:20px;padding-right:20px}
+@media (max-width:520px){.page{padding-block:28px 56px;padding-left:16px;padding-right:16px}}
+
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+.eyebrow{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+
+.mast{display:flex;flex-direction:column;gap:6px;margin-bottom:26px}
+.mast h1{margin:0;font-size:clamp(30px,7vw,40px);font-weight:600;letter-spacing:-.025em;text-wrap:balance;line-height:1.05}
+.mast .sub{color:var(--ink-2);max-width:62ch;font-size:15.5px;margin:0}
+
+.status{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin:26px 0 8px;box-shadow:var(--shadow)}
+@media (max-width:560px){.status{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--surface);padding:13px 14px;display:flex;flex-direction:column;gap:3px}
+.stat .n{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:23px;font-weight:600;letter-spacing:-.03em;line-height:1}
+.stat .n.now{color:var(--accent)}
+.stat .l{font-size:12px;color:var(--ink-3);line-height:1.3}
+
+.note{border-left:2px solid var(--rule);padding:2px 0 2px 14px;margin:22px 0 0;color:var(--ink-2);font-size:14.5px;max-width:66ch}
+.note strong{color:var(--ink);font-weight:600}
+code{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:13px;background:var(--rule-soft);padding:1px 5px;color:var(--ink)}
+
+.key{display:flex;flex-wrap:wrap;gap:8px 18px;margin:26px 0 0;align-items:center}
+.key .item{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink-2)}
+.mark{width:11px;height:11px;flex:none;display:block}
+
+.releases{margin-top:34px;display:flex;flex-direction:column}
+.rel{display:grid;grid-template-columns:126px minmax(0,1fr);gap:0 22px;padding:22px 0;border-top:1px solid var(--rule)}
+.rel:first-child{border-top:2px solid var(--ink)}
+@media (max-width:600px){.rel{grid-template-columns:minmax(0,1fr);gap:10px;padding:18px 0}}
+.spine{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+@media (max-width:600px){.spine{flex-direction:row;align-items:center;gap:10px;flex-wrap:wrap}}
+.ver{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:19px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.rel.minor .ver{font-size:23px}
+.rel.current .ver{color:var(--accent)}
+.pub{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px;color:var(--ink-3)}
+.tag{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border:1px solid var(--rule);color:var(--ink-3)}
+.tag.now{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.tag.est{border-style:dashed}
+
+.body h2{margin:0 0 5px;font-size:17px;font-weight:600;letter-spacing:-.01em;display:flex;align-items:center;gap:9px;text-wrap:balance}
+.rel.minor .body > h2{font-size:20px}
+.body p{margin:0;color:var(--ink-2);font-size:15px;max-width:64ch}
+.body p + p{margin-top:7px}
+.body .detail{margin-top:9px;display:flex;flex-wrap:wrap;gap:5px 7px}
+.chip{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-size:11.5px;color:var(--ink-2);background:var(--rule-soft);padding:3px 7px}
+.chip b{font-weight:600;color:var(--ink)}
+
+/* the grouped lists inside a large release */
+.grp{margin-top:18px}
+.grp > h3{margin:0 0 6px;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);display:flex;align-items:center;gap:8px}
+.grp > h3::after{content:"";flex:1;height:1px;background:var(--rule)}
+.grp ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+.grp li{display:grid;grid-template-columns:11px minmax(0,1fr);gap:0 10px;font-size:14.5px;color:var(--ink-2);line-height:1.5}
+.grp li .mark{margin-top:6px}
+.grp li b{color:var(--ink);font-weight:600}
+.grp li .v{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11.5px;color:var(--ink-3);white-space:nowrap}
+
+/* publishes inside a milestone */
+.pubs{margin:0;padding:0;list-style:none;border:1px solid var(--rule);background:var(--surface)}
+.pubs li{display:grid;grid-template-columns:52px minmax(0,1fr);gap:0 12px;padding:8px 12px;border-top:1px solid var(--rule-soft);font-size:14px;color:var(--ink-2)}
+.pubs li:first-child{border-top:0}
+.pubs li .p{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink)}
+
+.tw{overflow-x:auto;border:1px solid var(--rule);background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:6px 10px;border-top:1px solid var(--rule-soft);text-align:left;white-space:nowrap}
+tr:first-child th{border-top:0}
+th{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+th.n,td.n{text-align:right;font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+td.good{color:var(--good);font-weight:600}
+td.bad{color:var(--bad)}
+.tnote{font-size:12.5px;color:var(--ink-3);margin-top:6px;max-width:70ch}
+
+.ahead{margin-top:52px;border:1px solid var(--rule);background:var(--surface);box-shadow:var(--shadow)}
+.ahead .hd{padding:14px 18px;border-bottom:1px solid var(--rule)}
+.ahead .hd h2{margin:4px 0 0;font-size:18px;font-weight:600;letter-spacing:-.015em}
+.gate{display:grid;grid-template-columns:96px minmax(0,1fr);gap:0 18px;padding:15px 18px;border-top:1px solid var(--rule-soft)}
+.gate:first-of-type{border-top:0}
+@media (max-width:560px){.gate{grid-template-columns:minmax(0,1fr);gap:6px}}
+.gate .g{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:15px;font-weight:600;color:var(--ink-3)}
+.gate p{margin:0;font-size:14.5px;color:var(--ink-2);max-width:60ch}
+.gate p strong{color:var(--ink);font-weight:600}
+
+footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--rule);color:var(--ink-3);font-size:13px;display:flex;flex-direction:column;gap:6px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="m-food" viewBox="0 0 11 11"><rect x="0" y="0" width="11" height="11" fill="var(--area-food)"/></symbol>
+  <symbol id="m-body" viewBox="0 0 11 11"><polygon points="5.5,0 11,11 0,11" fill="var(--area-body)"/></symbol>
+  <symbol id="m-str" viewBox="0 0 11 11"><polygon points="5.5,0 11,5.5 5.5,11 0,5.5" fill="var(--area-strength)"/></symbol>
+  <symbol id="m-core" viewBox="0 0 11 11"><circle cx="5.5" cy="5.5" r="5.5" fill="var(--area-core)"/></symbol>
+</svg>
+
+<div class="page">
+
+  <header class="mast">
+    <span class="eyebrow">Bodyweight · food · cardio · strength</span>
+    <h1>Squid changelog</h1>
+    <p class="sub">Every release from the first build to the current one, with what shipped in each. Newest first.</p>
+  </header>
+
+  <div class="status">
+    <div class="stat"><span class="n now mono">0.9.2</span><span class="l">current release · v103</span></div>
+    <div class="stat"><span class="n mono">24</span><span class="l">releases</span></div>
+    <div class="stat"><span class="n mono">103</span><span class="l">published builds</span></div>
+    <div class="stat"><span class="n mono">v5</span><span class="l">settings schema</span></div>
+  </div>
+
+  <p class="note"><strong>Two numbers, two jobs.</strong> The semver on the left is the milestone. The <code>vNN</code> beside it is the artifact's own publish number, which goes up on every publish, small fixes included, and is the one to quote. The settings schema moves only when stored settings change shape: <code>v5</code> since the v0.9 registry.</p>
+  <p class="note"><strong>Paused at 0.7.7, brought back at 0.9.0.</strong> 0.8.0 and 0.8.x are written from the roadmap, the audits and the project notes; publish ranges marked approximate are inferred from them. From 0.9.0 on, every entry is from the build.</p>
+
+  <div class="key">
+    <span class="eyebrow">Area</span>
+    <span class="item"><svg class="mark"><use href="#m-food"/></svg>Food</span>
+    <span class="item"><svg class="mark"><use href="#m-body"/></svg>Body &amp; cardio</span>
+    <span class="item"><svg class="mark"><use href="#m-str"/></svg>Strength</span>
+    <span class="item"><svg class="mark"><use href="#m-core"/></svg>Foundation</span>
+  </div>
+
+  <div class="releases">
+
+    <!-- ================= 0.9.2 ================= -->
+    <article class="rel current">
+      <div class="spine">
+        <span class="ver mono">0.9.2</span>
+        <span class="pub">v103</span>
+        <span class="tag now">Current</span>
+      </div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-food"/></svg>Staples in two letters</h2>
+        <p>The foods you have logged now lead a search by how often you log them, not A–Z, so "ch" puts the chicken breast you log daily above the cheddar you logged once. Equal counts read A–Z, and everything you have never logged still follows A–Z.</p>
+        <div class="detail">
+          <span class="chip">promise <b>FOOD-9</b> revised, with its test</span>
+          <span class="chip">1 part changed · <b>r9</b></span>
+        </div>
+      </div>
+    </article>
+
+    <!-- ================= 0.9.1 ================= -->
+    <article class="rel">
+      <div class="spine">
+        <span class="ver mono">0.9.1</span>
+        <span class="pub">v102</span>
+      </div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-food"/></svg>Search leads with what you eat</h2>
+        <p>A typed food search lists every match you have logged before first, A–Z, then every other match, A–Z. It used to rank by whether the name started with what you typed, then by shortest name, so a food you log daily could sit under one you never have. The recipes-only list and the ingredient picker order the same way. An empty search still opens on suggestions for the hour, then recent foods.</p>
+        <div class="detail">
+          <span class="chip">promise <b>FOOD-9</b>, with a test</span>
+          <span class="chip">1 part changed · <b>r9</b></span>
+        </div>
+      </div>
+    </article>
+
+    <!-- ================= 0.9.0 ================= -->
+    <article class="rel minor">
+      <div class="spine">
+        <span class="ver mono">0.9.0</span>
+        <span class="pub">v92–v101</span>
+      </div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-core"/></svg>The adaptability update</h2>
+        <p>Squid stops assuming its user is a cyclist who lifts for hypertrophy, weighs in pounds and starts the week on Monday. A new account spends under a minute on setup and lands in an app shaped around what it tracks: any kind of cardio, four ways to measure training, its own units, and pages it can rearrange. Three stand-in users, a runner without power, a lifter who does no cardio and a cutter who logs only food and weight, each onboard, log a week and never meet anything built for a cyclist. Ian's app is unchanged apart from what was meant to change.</p>
+        <div class="detail">
+          <span class="chip"><b>10</b> publishes</span>
+          <span class="chip">tests <b>16 → 29</b></span>
+          <span class="chip">promises <b>155</b>, each with a test</span>
+          <span class="chip">slowest page at 4× <b>41 → 38 ms</b></span>
+          <span class="chip">2 data bugs found and fixed</span>
+        </div>
+
+        <div class="grp"><h3>Added</h3><ul>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>Onboarding.</b> A new account opens on Quick setup, Full setup or Skip. Quick asks what you track, units and week start, bodyweight, goal direction, training style, and your kinds of cardio with their metrics and default, in about seven taps. Full is the Settings groups themselves, adds your MacroFactor history, and leaves out what changes nothing the app records. Answers save as you give them, so leaving part way keeps them. <span class="v">v98</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>Replay onboarding</b> in Settings → Sample data. Runs every step on copies, writes nothing, and ends by listing what it would have set. <span class="v">v98</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>Week by week.</b> A page and a dashboard card with one lane per kept domain: intake, weight, the training metric, cardio hours and cardio intensity (energy per hour), lined up on calendar weeks from your week start. A tap picks a week across every lane. 12 weeks, 26 or a year. <span class="v">v99</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>Arrange any page.</b> Hold a section's heading on the weight, macros, expenditure, cardio, workouts or summary page to drag it or hide it with the eye. The Add menu works the same way. The layout syncs to the account. The bottom tabs never change. <span class="v">v97</span></span></li>
+          <li><svg class="mark"><use href="#m-body"/></svg><span><b>Cardio of every kind.</b> Ride, run, row, swim, walk and other, each with its own tracked metrics chosen from distance, heart rate, watts and MET, time always on. Energy is watts × 3.6 per hour where power is tracked and MET × bodyweight × hours otherwise; a kind with neither logs no energy. One kind is the default the logger opens on. <span class="v">v92, v96</span></span></li>
+          <li><svg class="mark"><use href="#m-body"/></svg><span><b>The Cardio page</b> with a filter by kind, and presets for every kind: a long run or a threshold ride goes on a day of the week and opens the logger filled in. <span class="v">v96, v97</span></span></li>
+          <li><svg class="mark"><use href="#m-str"/></svg><span><b>Four training styles:</b> effective reps, volume, strength over time (load × reps per exercise), or sessions only. The set sheet asks for what the style needs, and every strength view counts that style's metric. <span class="v">v92, v96</span></span></li>
+          <li><svg class="mark"><use href="#m-str"/></svg><span><b>Hold to drag</b> in the workout editor, the live session, the workouts and presets lists and the dashboard. <b>Duplicate a workout.</b> Exercises fold by body part under push, pull, legs and core, colour coded; rear delts pull, side delts push, low back is core. <span class="v">v93–v95</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>Units:</b> distance in km or miles and energy in kcal or kJ, beside weight. A new account starts in its region's units and first day of the week. <span class="v">v92, v100</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>What you track.</b> Food, bodyweight, strength and cardio each switch on and off; an untracked domain leaves the tabs, the dashboard and Settings. <span class="v">v92</span></span></li>
+          <li><svg class="mark"><use href="#m-food"/></svg><span><b>Goal direction</b> (lose, maintain, gain) in the renamed Goal and targets group. Stored for now; nothing reads it yet, by decision. <span class="v">v98</span></span></li>
+          <li><svg class="mark"><use href="#m-food"/></svg><span><b>Kilojoule imports.</b> A MacroFactor export headed "Energy (kJ)" is read and converted, and so is a generic CSV. The CSV export writes energy in your unit. <span class="v">v100</span></span></li>
+        </ul></div>
+
+        <div class="grp"><h3>Changed</h3><ul>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>Empty states.</b> Anything with nothing logged yet is its one action instead of zeros, dashes or a sentence about what it would show: a dashboard card becomes Log weight, Log a ride or Start a workout and a tap does it, once per action across the dashboard; a page's action moves from the bar into the body. <span class="v">v97</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>From 320 px to a tablet.</b> Every grid column is strict, so content can't widen it. The dashboard goes to three columns once it has the room, and the last card on a short row takes what is left. Four-choice pickers go two by two when they don't fit; tab names shrink on a small phone at large text. <span class="v">v97, v98</span></span></li>
+          <li><svg class="mark"><use href="#m-body"/></svg><span><b>Cardio speaks its own words.</b> With one kind tracked the app uses that kind's words, so a rider still reads Riding; with more it says Cardio and sessions. Power things (FTP, TSS, presets' watts, the power dial) appear only where something tracks watts. An account with no cardio has no cardio column, count or row anywhere. <span class="v">v96, v100</span></span></li>
+          <li><svg class="mark"><use href="#m-str"/></svg><span><b>Sessions-only style:</b> a tap on a lift edits its sets, a swipe completes one. Effective reps are entered 0 to 5 by the swipe and are never copied from another set. <span class="v">v95, v97</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>Settings</b> run in the onboarding order, with Appearance and Swipe and touch last, and lost the captions under weight, weekly basis, week start, sessions left open and the ride pool. <span class="v">v96</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>New accounts start neutral:</b> no targets, no FTP, no power band, ride only until onboarding says otherwise. Existing accounts keep every number they hold. <span class="v">v92, v97</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>Sample data</b> follows the account: sessions of its own kind, measured the way it measures them, and none at all where cardio isn't tracked. <span class="v">v100</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>Every small control</b> is at least 30 px each way. <span class="v">v101</span></span></li>
+        </ul></div>
+
+        <div class="grp"><h3>Removed</h3><ul>
+          <li><svg class="mark"><use href="#m-str"/></svg><span>The <b>derived effective-rep calculation.</b> A set stores the effective reps entered, and only under that style. <span class="v">v92</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span>The <b>dashboard's arrange button and arrows</b>, replaced by holding a card. <span class="v">v93–v95</span></span></li>
+          <li><svg class="mark"><use href="#m-body"/></svg><span>Putting a <b>kind of cardio itself on the week</b>. It shipped in v96; a preset is what goes on a day instead. <span class="v">v97</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span>"Nothing scheduled.", "No workouts yet.", "No photos yet.", "The plate is empty." and the other sentences explaining an absence. <span class="v">v97</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span>Seven functions and one stylesheet rule nothing used. <span class="v">v101</span></span></li>
+        </ul></div>
+
+        <div class="grp"><h3>Fixed</h3><ul>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>A slow connection could lose a re-entered record.</b> Clearing a day and logging it again soon after could leave it missing from the phone, or showing the value from before, while the account had the right one. It predates v0.9. <span class="v">v100–v101</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>The onboarding replay</b> left what the account delivered while it ran out of this device's cache. <span class="v">v101</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span>The logging page scrolled sideways by 5 px at 320 px with large text. <span class="v">v97</span></span></li>
+          <li><svg class="mark"><use href="#m-food"/></svg><span>The Add menu's squares left an empty slot when fewer than four were on. <span class="v">v97</span></span></li>
+        </ul></div>
+
+        <div class="grp"><h3>Improved</h3><ul>
+          <li><svg class="mark"><use href="#m-str"/></svg><span>The body-parts card walks the log once instead of once per part: same numbers, about four times faster. <span class="v">v101</span></span></li>
+          <li><svg class="mark"><use href="#m-str"/></svg><span>The exercise page draws 150 nodes instead of 349 at three years, folded by body part. <span class="v">v95</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span>The test suite: a configuration matrix over units, week start, theme, text size and density, data and width; three persona fixtures; a permanent release gate; an audit tool that measures two builds the same way. <span class="v">G1, G2, v100, v101</span></span></li>
+        </ul></div>
+
+        <div class="grp"><h3>Benchmarks · three years of records</h3>
+          <div class="tw"><table>
+            <tr><th>Measure</th><th class="n">v91 (0.8.x)</th><th class="n">v101</th></tr>
+            <tr><td>Slowest page, 4× CPU</td><td class="n">41 ms</td><td class="n good">38 ms</td></tr>
+            <tr><td>Add food, 4× CPU</td><td class="n">32.0 ms</td><td class="n good">25.1 ms</td></tr>
+            <tr><td>Dashboard, 1×</td><td class="n">5.7 ms</td><td class="n">5.7 ms</td></tr>
+            <tr><td>Week by week, 52 weeks, 4×</td><td class="n">—</td><td class="n">11.0 ms</td></tr>
+            <tr><td>New account, first render</td><td class="n">28 ms</td><td class="n">30 ms</td></tr>
+            <tr><td>Cache written by a change from another device</td><td class="n">2 keys, 39 KB</td><td class="n">2 keys, 39 KB</td></tr>
+            <tr><td>Published page</td><td class="n">550 KB · 149 KB gz</td><td class="n bad">590 KB · 164 KB gz</td></tr>
+            <tr><td>Tests · full run</td><td class="n">16 · ~15 s</td><td class="n good">29 · 126 jobs · ~80 s</td></tr>
+          </table></div>
+          <p class="tnote">Same harness, same session: medians of 15 renders at 1× and 7 at 4×, 375×667 at DPR 2. Full detail in Audit 4.</p>
+        </div>
+
+        <div class="grp"><h3>Publishes</h3>
+          <ul class="pubs">
+            <li><span class="p">v92</span><span>Foundations: the settings registry with migration, neutral defaults, distance and energy units, what you track, the cardio model, the training model.</span></li>
+            <li><span class="p">v93–95</span><span>Hold to drag in the workout editor, the session, the lists and the dashboard, where the arrows and arrange button go; duplicate a workout; exercise folds by body part; effective reps never copied between sets (v95).</span></li>
+            <li><span class="p">v96</span><span>Settings reordered; the Cardio page, logger and settings section; the logger and strength views follow the training style.</span></li>
+            <li><span class="p">v97</span><span>One layout mechanism; empty states; 320 px to tablet; presets for every kind of cardio; sessions-only tap edits.</span></li>
+            <li><span class="p">v98</span><span>Onboarding, quick and full, and the replay in Settings.</span></li>
+            <li><span class="p">v99</span><span>Week by week.</span></li>
+            <li><span class="p">v100</span><span>Close of v0.9: the sweep for assumptions about Ian, the release gate, parity with v91 on his data.</span></li>
+            <li><span class="p">v101</span><span>Audit 4 fixes: the slow-connection re-entry, the replay's cache, 30 px controls, the body-parts pass, dead code.</span></li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <!-- ================= 0.8.x ================= -->
+    <article class="rel minor">
+      <div class="spine">
+        <span class="ver mono">0.8.x</span>
+        <span class="pub">v82–v91</span>
+        <span class="tag est">Reconstructed</span>
+      </div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-core"/></svg>Hardening</h2>
+        <p>Audit 3 found the app fast enough and the data path not: four ways to lose or keep data unintentionally, and a test suite that mostly could not fail. Nothing in 0.8.x adds a feature.</p>
+
+        <div class="grp"><h3>Fixed</h3><ul>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>Records saved before the account connected, or offline, were discarded</b> by the first snapshot. A persisted set of pending writes now survives it and uploads later, including an import closed part way. <span class="v">v82</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>Sample data loaded from Settings was written to the account</b> and came back as real after a reload. It now stays on the device. <span class="v">v82</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>Neither "everything" button erased everything</b>, and they disagreed. One erase now clears every collection, photos and tombstones. <span class="v">v82</span></span></li>
+        </ul></div>
+        <div class="grp"><h3>Improved</h3><ul>
+          <li><svg class="mark"><use href="#m-core"/></svg><span>Renders coalesce to one per frame: a new device settles in two instead of nine. The demo waits for the account instead of flashing sample numbers at a returning user. <span class="v">v83</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span>A change from another device rewrites one month of cache instead of all of it. One upload helper with progress and resume replaces six copies of the same loop. Comments are stripped from the published page. <span class="v">v83</span></span></li>
+          <li><svg class="mark"><use href="#m-food"/></svg><span>The add-food page draws what is on screen first. The food log collapses empty hours outside your own logging window instead of opening on midnight. <span class="v">v83</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>The test suite, replaced:</b> 16 tests, each proving lines in a behaviour spec, about 15 s for a full run, a text-parity tool for comparing builds, and the old 48 suites deleted. <span class="v">v83</span></span></li>
+        </ul></div>
+        <div class="grp"><h3>Changed and removed</h3><ul>
+          <li><svg class="mark"><use href="#m-food"/></svg><span>Targets got one Floor and Ceiling header instead of eight labels; captions that explained the interface went. <span class="v">v83</span></span></li>
+          <li><svg class="mark"><use href="#m-body"/></svg><span>"Work" left the Riding page. <span class="v">v83</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span>The banner's Start empty button, the repeated demo toast, and then the launch demo and banner themselves: a fresh install opens empty behind the Squid launch screen, and sample data comes only from Settings. <span class="v">v83, v84</span></span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span>Duplicate helpers merged, dead classes removed, source parts gathered into one folder with a build manifest. Smaller fixes from v85 to v91 are not itemized. <span class="v">v83–v91</span></span></li>
+        </ul></div>
+        <div class="grp"><h3>Benchmarks · three years of records</h3>
+          <div class="tw"><table>
+            <tr><th>Measure</th><th class="n">Audit 3 (0.8.0)</th><th class="n">v91</th></tr>
+            <tr><td>Add food, 4× CPU</td><td class="n">83.4 ms</td><td class="n good">32.0 ms</td></tr>
+            <tr><td>Renders to settle, new device</td><td class="n">9</td><td class="n good">2</td></tr>
+            <tr><td>Cache written by a change from another device</td><td class="n">22 keys, 537 KB (1 yr)</td><td class="n good">2 keys, 39 KB</td></tr>
+            <tr><td>Published page</td><td class="n">688 KB · 204 KB gz</td><td class="n good">550 KB · 149 KB gz</td></tr>
+          </table></div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ================= 0.8.0 ================= -->
+    <article class="rel minor">
+      <div class="spine">
+        <span class="ver mono">0.8.0</span>
+        <span class="pub">≈v58–v81</span>
+        <span class="tag est">Reconstructed</span>
+      </div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-core"/></svg>The design system</h2>
+        <p>Squid got a visual identity and a way for it to change without breaking. Colour enters one way: a component uses a role, a role points at a swatch, and a theme is a set of swatch values. Nothing below the palette holds a colour of its own, and a theme changes what a colour is, never what it means.</p>
+
+        <div class="grp"><h3>Added</h3><ul>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>The palette contract:</b> 21 stored swatches (12 hues, 9 surfaces), about 50 roles reading them, every shadow and scrim from one swatch at six opacities. Text on a fill is derived to clear 4.5:1 from whatever the fill is, so an edited palette can't produce unreadable buttons.</span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>Tokens</b> for type scale, radius, border, shadow and motion, and <b>text size and density</b> as multipliers you set per device.</span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>Themes:</b> Default, High contrast, Nautical, Nocturne, Sepia, Crimson, Forest, Murica and Matrix, plus your own. Custom themes and the chosen one sync to the account, with a local copy for the first frame.</span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>The theme editor</b> with a live specimen and a colour picker built for the app. It never corrects a colour and never blocks saving; a real problem shows as a warning beside Save. Themes travel as pasted JSON.</span></li>
+        </ul></div>
+        <div class="grp"><h3>Changed</h3><ul>
+          <li><svg class="mark"><use href="#m-core"/></svg><span>The duplicated dark block merged; the categorical palettes tokenized and colliding roles separated, so the ten plan marks, the ten body parts and the four macros each stay distinct inside their own set.</span></li>
+          <li><svg class="mark"><use href="#m-core"/></svg><span><b>Eight design principles,</b> codified after v58 and v59 and applied since: the interface explains itself, position belongs to you, a colour only has to be distinct in its own set, grid before content, defaults from data, a look is not a decision, tapping a thing edits that thing, and consistency is a bug to fix.</span></li>
+        </ul></div>
+        <div class="detail">
+          <span class="chip">Design audit <b>v55</b></span>
+          <span class="chip">Engine audit <b>v57</b></span>
+          <span class="chip">token audits <b>3–6</b></span>
+          <span class="chip">Audit 3 at the 0.8.0 build</span>
+        </div>
+      </div>
+    </article>
+
+    <!-- ================= 0.7.x and earlier, as published ================= -->
+    <article class="rel">
+      <div class="spine"><span class="ver mono">0.7.7</span></div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-str"/></svg>Workouts as exercise overview</h2>
+        <p>Hero module leading the page, one Start a workout button in place of a pair that only looked like a pair, riding migrated onto the page as a section. Each chart keeps its own span and position; swiping sideways moves the window through time.</p>
+        <p>Plans took a colour and a shape, so Push, Pull and Legs are apart at a glance. Circle is reserved for rides, which are the one thing that is never a plan.</p>
+        <div class="detail">
+          <span class="chip">pan gesture moved off the redrawn node</span>
+          <span class="chip">next free <b>colour + shape</b> per plan</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="rel">
+      <div class="spine"><span class="ver mono">0.7.6</span></div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-str"/></svg>Per-segment bar tapping</h2>
+        <p>The tap overlay converts the touch into chart space and returns the segment actually under it, instead of always answering with the topmost lift. The standing key was deleted; the readout became five data rows and no sentences.</p>
+      </div>
+    </article>
+
+    <article class="rel">
+      <div class="spine"><span class="ver mono">0.7.5</span></div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-core"/></svg>Sample data status</h2>
+        <p>Spinner and running count while a job writes, every button in the panel disabled until it finishes, and a confirmation on all seven paths. Six months is 182 day documents plus rides, each its own round trip. The wait was real work, not lag.</p>
+      </div>
+    </article>
+
+    <article class="rel">
+      <div class="spine"><span class="ver mono">0.7.4</span></div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-str"/></svg>Stacked effective reps</h2>
+        <p>Bars split by the lift that produced them, so a body part's weekly number shows its own arithmetic. Weight on the bar separated into its own chart.</p>
+        <div class="detail">
+          <span class="chip">triceps <b>15.0</b> pushdown</span>
+          <span class="chip"><b>6.9</b> bench</span>
+          <span class="chip"><b>7.5</b> incline</span>
+          <span class="chip"><b>6.0</b> overhead</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="rel">
+      <div class="spine"><span class="ver mono">0.7.3</span></div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-core"/></svg>Sample data suite</h2>
+        <p>Samples create the exercises they need rather than assuming a library. Three body profiles built forwards from a known expenditure using the same arithmetic the app tries to recover, so the estimator can be scored against the number that produced the weights.</p>
+        <p>Graph points only where a session actually trained the part, a hatched 20–30 band, and the volume metric dropped as redundant.</p>
+        <div class="detail">
+          <span class="chip">losing <b>193 → 174 lb</b></span>
+          <span class="chip">gaining <b>173 → 191 lb</b></span>
+          <span class="chip">Kalman within <b>1.4%</b> of truth</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="rel">
+      <div class="spine"><span class="ver mono">0.7.2</span></div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-core"/></svg>Sample data on demand</h2>
+        <p>Launch seeding removed entirely. Six months of push, pull and legs, loaded from a button in settings, with tapering gains and a deload every seventh week so the lines have a shape to read rather than a ruler.</p>
+      </div>
+    </article>
+
+    <article class="rel">
+      <div class="spine"><span class="ver mono">0.7.1</span></div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-core"/></svg>Sample seeding fix</h2>
+        <p>Seeding at boot raced three ways: the demo could be up and its teardown cleared every collection, the upload ran before the database connected, and the account had not answered whether it already held training. A settings document written before the flag existed also reset it on every open, which would have deleted real sessions to lay samples over them.</p>
+      </div>
+    </article>
+
+    <article class="rel minor">
+      <div class="spine"><span class="ver mono">0.7.0</span></div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-str"/></svg>Strength training</h2>
+        <p>Effective reps after Lyle McDonald, workout plans, the live session with its set sheet and progress ring, the pattern-aware shuffle, and the post-workout report. Exercises carry a primary muscle at full credit and secondaries at a share.</p>
+        <p>The rep model was wrong twice before it was right. It ended flat, not peaked: a set of thirty and a set of eight look alike to the muscle, so the window fills by eight, holds to twelve, then gives way to three by thirty as breathing ends the set before the muscle does.</p>
+        <div class="detail">
+          <span class="chip">8 reps → <b>5.0</b></span>
+          <span class="chip">12 → <b>5.0</b></span>
+          <span class="chip">20 → <b>4.1</b></span>
+          <span class="chip">30 → <b>3.0</b></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="rel">
+      <div class="spine"><span class="ver mono">0.6.3</span></div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-food"/></svg>Multi-select editing</h2>
+        <p>Tap an entry to enter selection mode; the menu replaces the search bar rather than stacking on it. Copy and Move arm the hour rows as drop targets. The week rail lost its stickiness entirely, which removed thirty lines of machinery along with the bug.</p>
+      </div>
+    </article>
+
+    <article class="rel">
+      <div class="spine"><span class="ver mono">0.6.2</span></div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-food"/></svg>MacroFactor import</h2>
+        <p>Both export formats parse end to end, food history feeds search, and recipe servings are corrected for MacroFactor writing serving weight as 100 ÷ servings. Pathways only, no data imported, by request.</p>
+        <div class="detail">
+          <span class="chip">xlsx + csv</span>
+          <span class="chip">density guard on <b>&gt;900 kcal/100g</b></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="rel">
+      <div class="spine"><span class="ver mono">0.6.1</span></div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-body"/></svg>Adaptive expenditure</h2>
+        <p>A two-state Kalman filter over true weight and TDEE with an RTS smoother, drawn as a second line beside the window estimate. Weight moves on intake minus expenditure over 7700 kcal per kilogram, and the filter runs that backwards.</p>
+        <div class="detail">
+          <span class="chip">true 2600 → <b>2606</b> at 7 days</span>
+          <span class="chip">4 kg bad reading moves it <b>2 kcal</b></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="rel minor">
+      <div class="spine"><span class="ver mono">0.6.0</span></div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-body"/></svg>Expenditure rework</h2>
+        <p>Window fixed at three weeks with the range moved into settings and the slider cut. Cardio modelled as a raised calorie ceiling, with each ride's calories forked and pooled across the days that follow rather than spiking one.</p>
+        <p>Graphs learned to tell a sideways swipe from an upright one, so panning a chart no longer fights scrolling the page.</p>
+      </div>
+    </article>
+
+    <article class="rel">
+      <div class="spine"><span class="ver mono">0.5.2</span></div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-food"/></svg>Log fixes and the Workouts tab</h2>
+        <p>Swipe-delete holds scroll position, stray calendar dots traced to a falsy gradient check, ride graphs turned red, and a pooled burned-per-day chart added. Riding became Workouts in the bottom nav with a hub behind it.</p>
+      </div>
+    </article>
+
+    <article class="rel">
+      <div class="spine"><span class="ver mono">0.5.1</span></div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-core"/></svg>Chrome cleanup</h2>
+        <p>Back buttons lost the word, the Day section and calendar captions went, the logged-days count moved under the calendar, and suggested targets came out of expenditure.</p>
+      </div>
+    </article>
+
+    <article class="rel minor">
+      <div class="spine"><span class="ver mono">0.5.0</span></div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-food"/></svg>Food logging rework</h2>
+        <p>The add page split into search, describe, quick add and recipes. The search bar moved to the bottom under the thumb and the tab bar got out of the way. Foods remember their last serving behind a one-tap plus, and the calendar paints calorie progress into the border itself.</p>
+      </div>
+    </article>
+
+    <article class="rel">
+      <div class="spine"><span class="ver mono">0.4.0</span><span class="tag est">Reconstructed</span></div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-core"/></svg>Photos, backup, AI</h2>
+        <p>Progress photo sessions with thumbnails in the synced record and full images one document each, JSON export, AI recipe generation and describe-what-you-ate.</p>
+      </div>
+    </article>
+
+    <article class="rel">
+      <div class="spine"><span class="ver mono">0.3.0</span><span class="tag est">Reconstructed</span></div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-body"/></svg>Expenditure and dashboard</h2>
+        <p>Window-based TDEE from intake against weight change, the energy page, the masonry dashboard and the weekly summary.</p>
+      </div>
+    </article>
+
+    <article class="rel">
+      <div class="spine"><span class="ver mono">0.2.0</span><span class="tag est">Reconstructed</span></div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-body"/></svg>Riding</h2>
+        <p>Rides and presets, average and normalised power, TSS against FTP, and ride energy derived from work done rather than estimated from time.</p>
+      </div>
+    </article>
+
+    <article class="rel">
+      <div class="spine"><span class="ver mono">0.1.0</span><span class="tag est">Reconstructed</span></div>
+      <div class="body">
+        <h2><svg class="mark"><use href="#m-food"/></svg>Core ledger</h2>
+        <p>Food logging against a seeded database with portions, the day record, weight entry, and the local cache syncing against the account.</p>
+      </div>
+    </article>
+
+  </div>
+
+  <section class="ahead">
+    <div class="hd">
+      <span class="eyebrow">What each remaining step buys</span>
+      <h2>Ahead</h2>
+    </div>
+    <div class="gate">
+      <span class="g mono">Migration</span>
+      <p><strong>Out of the artifact.</strong> Everything to a GitHub repo, deployed on Cloudflare Pages and Workers, developed in Claude Code. It unblocks the AI proxy so no key ever sits in the page, a real nutrition API, theme files, the full-height add page, and a QA build with its own account for onboarding replays and destructive tests.</p>
+    </div>
+    <div class="gate">
+      <span class="g mono">1.0.0</span>
+      <p><strong>The polish update.</strong> One design language on every page, microanimations as theme variables, Themes 2.0 with gradients, radius, shadows and Google Fonts, first paint without flicker, and import and export finished.</p>
+    </div>
+    <div class="gate">
+      <span class="g mono">After 1.0</span>
+      <p><strong>Other people.</strong> Accounts, a merge strategy for sync, a privacy stance and a delete-my-data path before anyone but Ian signs in.</p>
+    </div>
+  </section>
+
+  <footer>
+    <span>0.1.0–0.4.0 reconstructed from build generations and surviving screenshots; 0.8.0 and 0.8.x from the roadmap, Audit 3 and the project notes; 0.9.0 from the build, its tests and Audit 4.</span>
+    <span>Updated at v103, 2026-10-05.</span>
+  </footer>
+
+</div>
+
+
+</body></html>
