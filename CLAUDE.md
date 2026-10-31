@@ -58,4 +58,4 @@ Colour enters the app one way only: a component uses a role, a role points at a 
 
 - @docs/roadmap.md: what is planned and what is deliberately out of scope.
 - `docs/history/`: frozen records from the artifact era (the changelog through 0.9.2 / v103).
-- The app came from the Claude artifact "Squid"; tag `artifact-baseline` is a byte-identical import of the last published artifact. `npm run import:artifact <served.html>` re-imports a newer artifact version over `src/` if one is ever published again.
+- The app came from the Claude artifact "Squid"; the first commit ("Import Squid from the live Claude artifact") is a byte-identical import of the last published artifact. `npm run import:artifact <served.html>` re-imports a newer artifact version over `src/` if one is ever published again.
