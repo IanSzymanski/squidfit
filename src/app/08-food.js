@@ -1145,7 +1145,7 @@ function openRecipeEditor(recipe) {
 
 const AI_ERR = {
  rate_limited: "Too many requests just now — give it a minute.",
- session_expired: "Sign in to Claude again and retry.",
+ session_expired: "Sign in again and retry.",
  refused: "Claude wouldn't answer that one. Try describing the dish differently.",
  empty_completion: "Nothing came back. Try a shorter description.",
  invalid_json: "The answer came back malformed. Try again.",

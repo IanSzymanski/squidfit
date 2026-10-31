@@ -4,6 +4,21 @@
   "type": "module",
   "description": "Squid: a personal tracker for bodyweight, food, cardio and strength.",
   "scripts": {
-    "build": "node scripts/build.mjs"
+    "build": "node scripts/build.mjs",
+    "dev": "npm run build && wrangler dev",
+    "test": "npm run build && vitest run --max-workers=1 --no-isolate",
+    "test:e2e": "npm run build && node test/e2e/run.mjs",
+    "import:artifact": "node scripts/import-artifact.mjs",
+    "deploy": "npm run build && wrangler deploy --var BUILD:$(cat build/BUILD)",
+    "deploy:qa": "npm run build && wrangler deploy --env qa --var BUILD:$(cat build/BUILD)"
+  },
+  "dependencies": {
+    "jose": "^6.2.14"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.4.11",
+    "playwright": "^1.63.0",
+    "vitest": "^4.1.12",
+    "wrangler": "^4.156.0"
   }
 }

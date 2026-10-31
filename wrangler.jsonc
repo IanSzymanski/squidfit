@@ -1,0 +1,52 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "squidfit",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-10-20",
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": { "enabled": true },
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "ACCOUNT", "class_name": "Account" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Account"] }],
+  // Secrets, set once per environment and kept across deploys:
+  // ANTHROPIC_API_KEY, ALLOWED_EMAIL, ACCESS_TEAM_DOMAIN, ACCESS_AUD
+  "vars": {
+    "ENV": "prod",
+    "AI_MODEL_QUICK": "claude-haiku-5-5",
+    "AI_MODEL_DEFAULT": "claude-sonnet-5-5",
+    "AI_MODEL_COMPLEX": "claude-opus-5-5",
+    "AI_DAILY_CALLS": "60"
+  },
+  "env": {
+    // Bindings and vars are not inherited by environments, so QA repeats them on purpose.
+    "qa": {
+      "name": "squidfit-qa",
+      "workers_dev": true,
+      "preview_urls": false,
+      "assets": {
+        "directory": "./dist",
+        "binding": "ASSETS",
+        "not_found_handling": "single-page-application",
+        "run_worker_first": ["/api/*"]
+      },
+      "durable_objects": {
+        "bindings": [{ "name": "ACCOUNT", "class_name": "Account" }]
+      },
+      "vars": {
+        "ENV": "qa",
+        "AI_MODEL_QUICK": "claude-haiku-5-5",
+        "AI_MODEL_DEFAULT": "claude-haiku-5-5",
+        "AI_MODEL_COMPLEX": "claude-haiku-5-5",
+        "AI_DAILY_CALLS": "50"
+      }
+    }
+  }
+}

@@ -318,6 +318,16 @@ async function db2(db) {
  syncColl("photos", PHOTOS, null, p => p.d, photoSave);
  syncTombs();
  pendFlush("pix");
+ window.addEventListener("squid:online", ev => {
+  const since = ev.detail && ev.detail.since || 0;
+  TOMB.forEach((at, path) => {
+   if (at >= since) DB.doc("gone/" + tombId(path)).set({
+    p: path,
+    at: at
+   }).then(() => DB.doc(path).delete()).catch(() => {});
+  });
+  [ ...Object.keys(COLLMAP), "settings", "pix" ].forEach(c => pendFlush(c));
+ });
 }
 
 boot().catch(e => {
