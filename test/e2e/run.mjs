@@ -107,7 +107,14 @@ async function main() {
     await p.goto(ORIGIN + "/");
     return p;
   };
-  const booted = p => until("app booted", () => p.evaluate(() => !document.getElementById("splash") && !!DB && BOOTCOLLS.every(c => BOOTSEEN.has(c))), 20000);
+  const booted = async p => {
+    try {
+      await until("app booted", () => p.evaluate(() => !document.getElementById("splash") && !!DB && BOOTCOLLS.every(c => BOOTSEEN.has(c))), 20000);
+    } catch (e) {
+      const state = await p.evaluate(() => ({ splash: !!document.getElementById("splash"), db: !!DB, seen: [...BOOTSEEN], pending: PENDING.size })).catch(err => String(err));
+      throw new Error(`${e.message}; page state ${JSON.stringify(state)}`);
+    }
+  };
 
   const gen = await browser.newPage();
   const imgs = await gen.evaluate(() => Array.from({ length: 6 }, (_, i) => {
