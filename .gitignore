@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+.wrangler/
+.dev.vars
+.dev.vars.*
+.env
+test-results/
+playwright-report/
+# Health data never goes in git: backups, exports, account dumps
+export/
+*.backup.json
+squid-backup-*.json

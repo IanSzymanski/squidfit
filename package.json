@@ -1,0 +1,9 @@
+{
+  "name": "squidfit",
+  "private": true,
+  "type": "module",
+  "description": "Squid: a personal tracker for bodyweight, food, cardio and strength.",
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  }
+}
