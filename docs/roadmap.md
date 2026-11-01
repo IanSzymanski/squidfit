@@ -27,6 +27,7 @@ After 1.0: a nightly server backup (Cron Trigger writing `/api/export` to R2). I
 
 ## Backlog (unsequenced)
 
+- Passkey sign-in inside the Home Screen app, so a signed-out Home Screen app can sign itself in with Face ID instead of going back through Safari.
 - Bodyweight trend lines with selectable windows (7-day, 14-day rolling average, linear regression), framed as a decision input, not a prediction.
 - Export everything for outside analysis (Excel, R) to avoid lock-in.
 - Selective wearable sync (Apple Watch, Oura) if feasible; otherwise say plainly that it is not supported.

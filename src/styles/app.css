@@ -739,6 +739,11 @@ table.t .n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular
   letter-spacing:-.04em;line-height:var(--lh-none)}
 #splash.out{opacity:0;pointer-events:none}
 @keyframes splashgone{to{opacity:0;visibility:hidden;pointer-events:none}}
+#signin{position:fixed;inset:0;z-index:300;background:var(--bg);color:var(--ink);
+  display:grid;place-content:center;justify-items:center;gap:var(--s5);padding:0 var(--s5) 12vh;text-align:center}
+#signin .wm{font-size:calc(46px * var(--text-scale));font-weight:var(--fw-strong);
+  letter-spacing:-.04em;line-height:var(--lh-none)}
+#signin p{max-width:26ch;margin:0;color:var(--ink2);font-size:var(--fs-sm);line-height:var(--lh-body)}
 .lanebox{display:flex;justify-content:center;padding:6px 0}
 .lane{display:block;touch-action:pan-y}
 .lane .lanesel{fill:none;stroke:var(--ink3);stroke-width:1}

@@ -1,11 +1,13 @@
 # Architecture
 
-Squid is one Cloudflare Worker. Static assets (the built page, manifest, icons) are served from `dist/` without waking the Worker; only `/api/*` runs Worker code. Each signed-in account gets one Durable Object (`Account`, SQLite-backed) that holds every record and pushes changes to open pages over a hibernating WebSocket.
+Squid is one Cloudflare Worker. Static assets (the built page, manifest, icons) are served from `dist/` without waking the Worker; only `/api/*` and `/auth/*` run Worker code. Each signed-in account gets one Durable Object (`Account`, SQLite-backed) that holds every record and pushes changes to open pages over a hibernating WebSocket.
 
 ```
-phone / laptop ──Access login──▶ Worker squidfit
-                                   ├─ dist/*            static assets (free, unmetered)
+phone / laptop ──────────────────▶ Worker squidfit
+                                   ├─ dist/*            static assets (free, unmetered, public)
+                                   ├─ /auth/signin       behind Access: issues Squid's session cookie
                                    ├─ /api/health        build, env, whether AI is configured
+                                   ├─ /api/session       renews the session cookie
                                    ├─ /api/sync  ──WS──▶ Account DO (per email): docs table + live subscriptions
                                    ├─ /api/ai    ──────▶ Anthropic Messages API (key in a Worker secret)
                                    └─ /api/export        whole account as a Full backup (format 4)
@@ -48,7 +50,9 @@ Storage is one table: `docs(coll, id, body, updated)`, primary key `(coll, id)`.
 
 | Route | Env | |
 |---|---|---|
-| `GET /api/health` | all | `{ok, env, build, ai}`. Service tokens may call it. |
+| `GET /auth/signin` | all | Behind Access. Sets the session cookie, then redirects to `/` |
+| `GET /api/health` | all | `{ok, env, build, ai}`. Needs no sign-in. |
+| `GET /api/session` | all | `{ok}`, or 401 `signed_out`. Renews the cookie (at most daily) |
 | `GET /api/sync` | all | WebSocket upgrade |
 | `POST /api/ai` | all | `{input, modelTier, json}` → `{text, truncated}` |
 | `GET /api/export` | all | The account as a Full backup (format 4) |
@@ -59,11 +63,19 @@ Real data goes in through the app's own Settings → Data → Restore, which run
 
 ## Auth
 
-Cloudflare Access sits in front of the whole Worker (pages and API). Because static assets put an internal router in front of the Worker, `ctx.access` is not passed through, so `worker/auth.js` verifies the `Cf-Access-Jwt-Assertion` JWT itself against the team's signing keys, checks issuer and audience, and then requires the email to be in `ALLOWED_EMAIL`. Anything missing fails closed: no configuration is a 503, a missing token (`access_missing`), a token that does not verify (`access_rejected`) or another email (`forbidden`) is a 403. The Worker never answers 401: only Access itself does, for an expired session, so a configuration mistake cannot send the page round the sign-in loop. Service tokens reach `/api/health` only. Opening `/api/health` in a signed-in browser shows which check failed.
+Access covers one path, `/auth/signin`. Everything else (the page, its assets, `/api/*`) is outside Access, and the Worker checks Squid's own session on every `/api` call except health.
 
-Locally, `DEV_EMAIL` stands in for Access, but only when `ENV` is not `prod` and the request is to `localhost` or `127.0.0.1`.
+Why: an iOS Home Screen app opens any page on another domain in a Safari sheet with its own cookies. When Access covered the whole site, a launch without a valid Access cookie redirected to `<team>.cloudflareaccess.com`, the sign-in finished inside that sheet, and the app got nothing back ("Invalid login session", with Safari's address bar on top). Now the app never leaves its origin.
 
-An expired session shows up as a redirect or 401 on `/api`. The host probes `/api/health` when the socket cannot connect and reloads the page into the Access login when that probe says the session is gone (at most once a minute).
+Sign-in: `/auth/signin` verifies the `Cf-Access-Jwt-Assertion` JWT (static assets put an internal router in front of the Worker, so `ctx.access` is not passed through; `worker/auth.js` checks the signature against the team's keys, the issuer and the audience), requires the email to be in `ALLOWED_EMAIL`, and sets `__Host-squid` (HttpOnly, Secure, SameSite=Lax). The value is the account's Durable Object id and a 256-bit random token; the object stores only the token's SHA-256 with the email. A session lasts 400 days from its last use; `/api/session`, which the page calls on every launch, restarts that at most once a day. Removing an address from `ALLOWED_EMAIL` ends its sessions at once.
+
+Home Screen: Safari copies its cookies into a Home Screen app when it is added, so signing in once in Safari and then adding Squid is enough. If a Home Screen app is ever signed out, it says to sign in in Safari and add it again, because it cannot complete an Access sign-in itself.
+
+Failures: 401 means only "not signed in" (`signed_out`), and the page answers it with the sign-in screen. Configuration and token problems fail closed as 403 or 503: no configuration is a 503, a missing token at `/auth/signin` (`access_missing`), a token that does not verify (`access_rejected`) or another email (`forbidden`) is a 403. WebSocket handshakes and POSTs whose `Origin` is another site are refused.
+
+While Access still covers the whole site (during setup, or if it is turned on again for all of workers.dev), `/api` also accepts the Access JWT, and `/api/session` gives such a page a session of its own.
+
+Locally, `DEV_EMAIL` stands in for Access and the session, but only when `ENV` is not `prod` and the request is to `localhost` or `127.0.0.1`.
 
 ## AI
 

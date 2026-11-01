@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { exports } from "cloudflare:workers";
+import { exports, env as workerEnv } from "cloudflare:workers";
 import { generateKeyPair, exportJWK, SignJWT, createLocalJWKSet } from "jose";
-import { identify, teamOrigin } from "../../worker/auth.js";
+import { identify, signInIdentity, teamOrigin } from "../../worker/auth.js";
+import { freshAccount } from "./helpers.js";
 import { handleAI, firstJSON, modelFor } from "../../worker/ai.js";
 
 const api = (path, init) => exports.default.fetch(new Request("http://localhost" + path, init));
@@ -80,25 +81,92 @@ describe("Access identity", () => {
   });
 
   it("fails closed with no token or no configuration", async () => {
-    expect((await identify(req(null), env, keys))).toMatchObject({ status: 403, code: "access_missing" });
+    expect((await identify(req(null), env, keys))).toMatchObject({ status: 401, code: "signed_out" });
+    expect((await signInIdentity(req(null), env, keys))).toMatchObject({ status: 403, code: "access_missing" });
     expect((await identify(req(await sign({ email: "owner@example.com" })), { ENV: "prod" }, keys)).status).toBe(503);
   });
 
-  it("never answers 401, so a misconfigured Worker cannot look like an expired session and loop the page through sign-in", async () => {
-    const bad = [req(null), req(await sign({ email: "owner@example.com" }, { aud: "other" })), req(await sign({ email: "else@example.com" }))];
-    for (const r of bad) expect((await identify(r, env, keys)).status).not.toBe(401);
-    expect((await identify(req(await sign({ email: "owner@example.com" })), { ...env, ACCESS_TEAM_DOMAIN: "renamed-team" }, keys)).status).not.toBe(401);
+  it("answers 401 only for 'not signed in', so a misconfigured Worker never looks like a sign-in problem", async () => {
+    const bad = [req(await sign({ email: "owner@example.com" }, { aud: "other" })), req(await sign({ email: "else@example.com" })), req(await sign({ common_name: "ci.access" }))];
+    for (const r of bad) expect((await identify(r, env, keys)).status).toBe(403);
+    expect((await identify(req(await sign({ email: "owner@example.com" })), { ...env, ACCESS_TEAM_DOMAIN: "renamed-team" }, keys)).status).toBe(403);
   });
 
   it("never honours the local dev identity in production or off localhost", async () => {
     const local = new Request("http://localhost/api/health");
-    expect(await identify(local, { ENV: "qa", DEV_EMAIL: "dev@example.com" })).toEqual({ email: "dev@example.com" });
-    expect((await identify(local, { ...env, DEV_EMAIL: "dev@example.com" }, keys)).status).toBe(403);
-    expect((await identify(req(null), { ...env, ENV: "qa", DEV_EMAIL: "dev@example.com" }, keys)).status).toBe(403);
+    expect(await identify(local, { ENV: "qa", DEV_EMAIL: "dev@example.com" })).toEqual({ email: "dev@example.com", dev: true });
+    expect((await identify(local, { ...env, DEV_EMAIL: "dev@example.com" }, keys)).status).toBe(401);
+    expect((await identify(req(null), { ...env, ENV: "qa", DEV_EMAIL: "dev@example.com" }, keys)).status).toBe(401);
+    expect((await signInIdentity(local, { ...env, DEV_EMAIL: "dev@example.com" }, keys)).status).toBe(403);
+  });
+});
+
+describe("Sign-in sessions", () => {
+  const site = "https://squidfit.example.workers.dev";
+  const at = (path, init) => exports.default.fetch(new Request(site + path, init));
+  const DAY = 86400 * 1000;
+  const signIn = async () => {
+    const res = await api("/auth/signin", { redirect: "manual" });
+    expect(res.status).toBe(303);
+    expect(res.headers.get("location")).toBe("/");
+    const set = res.headers.get("set-cookie");
+    expect(set).toMatch(/^__Host-squid=[0-9a-f]{64}\.[A-Za-z0-9_-]{43}; Path=\/; Max-Age=34560000; Secure; HttpOnly; SameSite=Lax$/);
+    return set.split(";")[0];
+  };
+
+  it("signs in at /auth/signin, and the cookie then signs in the API off localhost", async () => {
+    const cookie = await signIn();
+    const res = await at("/api/session", { headers: { cookie } });
+    expect(res.status).toBe(200);
+    expect(res.headers.get("set-cookie")).toBeNull();
+    expect((await at("/api/export", { headers: { cookie } })).status).toBe(200);
   });
 
-  it("treats a service token as health-only", async () => {
-    expect(await identify(req(await sign({ common_name: "ci.access" })), env, keys)).toEqual({ service: "ci.access" });
+  it("answers 401 signed_out with no cookie, or a tampered, foreign or malformed one", async () => {
+    const cookie = await signIn();
+    const [id, token] = cookie.slice(cookie.indexOf("=") + 1).split(".");
+    const flip = token.slice(0, -1) + (token.endsWith("A") ? "B" : "A");
+    const other = workerEnv.ACCOUNT.newUniqueId().toString();
+    for (const c of [null, `__Host-squid=${id}.${flip}`, `__Host-squid=${other}.${token}`, `__Host-squid=${"0".repeat(64)}.${token}`, "__Host-squid=nonsense"]) {
+      const res = await at("/api/session", { headers: c ? { cookie: c } : {} });
+      expect(res.status).toBe(401);
+      expect(await res.json()).toMatchObject({ code: "signed_out" });
+    }
+  });
+
+  it("stops honouring a session once its email leaves ALLOWED_EMAIL", async () => {
+    const cookie = await signIn();
+    const r = new Request(site + "/api/session", { headers: { cookie } });
+    expect(await identify(r, workerEnv)).toMatchObject({ email: "owner@example.com" });
+    const narrowed = { ENV: "test", ACCOUNT: workerEnv.ACCOUNT, ALLOWED_EMAIL: "someone@example.com" };
+    expect(await identify(r, narrowed)).toMatchObject({ status: 401, code: "signed_out" });
+  });
+
+  it("lasts 400 days from its last use and renews at most once a day", async () => {
+    const a = freshAccount(), t0 = Date.now(), who = { email: "owner@example.com" };
+    await a.openSession(who.email, "h", t0);
+    expect(await a.checkSession("h", t0 + 1000)).toEqual({ ...who, renew: false });
+    expect(await a.checkSession("h", t0 + 2 * DAY)).toEqual({ ...who, renew: true });
+    expect(await a.checkSession("h", t0 + 2 * DAY + 3600 * 1000)).toEqual({ ...who, renew: false });
+    expect(await a.checkSession("h", t0 + 401 * DAY)).toEqual({ ...who, renew: true });
+    expect(await a.checkSession("h", t0 + 802 * DAY)).toBeNull();
+    expect(await a.checkSession("h", t0 + 802 * DAY - 1)).toBeNull();
+  });
+
+  it("refuses WebSocket handshakes and POSTs from another site", async () => {
+    const cookie = await signIn();
+    expect((await at("/api/sync", { headers: { cookie, upgrade: "websocket", origin: "https://evil.example" } })).status).toBe(403);
+    expect((await at("/api/ai", { method: "POST", headers: { cookie, origin: "https://evil.example" }, body: "{}" })).status).toBe(403);
+    const ok = await at("/api/sync", { headers: { cookie, upgrade: "websocket", origin: site } });
+    expect(ok.status).toBe(101);
+    ok.webSocket.accept();
+    ok.webSocket.close();
+  });
+
+  it("serves health without signing in, and refuses sign-in when Access does not cover /auth/signin", async () => {
+    expect((await at("/api/health")).status).toBe(200);
+    expect((await at("/auth/signin", { redirect: "manual" })).status).toBe(503);
+    expect((await at("/auth/signin", { method: "POST" })).status).toBe(405);
   });
 });
 
