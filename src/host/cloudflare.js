@@ -29,10 +29,14 @@ function emit(l, value) {
   try { l.next(value); } catch (e) { console.error(e); }
 }
 
-// Session: Access answers an expired session with a redirect (or 401), never with JSON from the Worker.
+// Session: Squid's own cookie, issued at /auth/signin (the only path Access covers). /api/session renews it on each launch.
+// A 401, or a redirect from Access while it still covers the whole site, means signed out. Signing in leaves the page, and an
+// iOS Home Screen app cannot finish a sign-in on Access's domain, so there it gets its cookie from Safari when it is added.
+let signedOut = false, probing = false;
+
 async function sessionGone() {
   try {
-    const r = await fetch("/api/health", { headers: XHR, redirect: "manual", cache: "no-store", credentials: "same-origin" });
+    const r = await fetch("/api/session", { headers: XHR, redirect: "manual", cache: "no-store", credentials: "same-origin" });
     if (r.type === "opaqueredirect" || r.status === 401) return true;
     if (!r.ok) console.error("Squid sync unavailable:", r.status, await r.text().catch(() => ""));
     return false;
@@ -41,24 +45,40 @@ async function sessionGone() {
   }
 }
 
-function relogin() {
-  const key = "squid.relogin";
-  let last = 0;
-  try { last = +sessionStorage.getItem(key) || 0; } catch (e) {}
-  if (Date.now() - last < 60000) return;
-  try { sessionStorage.setItem(key, String(Date.now())); } catch (e) {}
-  location.reload();
-}
-
-let probing = false;
 async function checkSession() {
-  if (probing) return;
+  if (probing || signedOut) return;
   probing = true;
   try {
-    if (await sessionGone()) relogin();
+    if (await sessionGone()) showSignIn();
   } finally {
     probing = false;
   }
+}
+
+function showSignIn() {
+  if (signedOut) return;
+  signedOut = true;
+  clearTimeout(sock.retry);
+  const box = document.createElement("div");
+  box.id = "signin";
+  const wm = document.createElement("span");
+  wm.className = "wm";
+  wm.textContent = "Squid";
+  box.append(wm);
+  if (navigator.standalone === true) {
+    const p = document.createElement("p");
+    p.textContent = "Sign in to Squid in Safari, then add it to your Home Screen again.";
+    box.append(p);
+  } else {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn pri";
+    b.textContent = "Sign in";
+    b.addEventListener("click", () => location.assign("/auth/signin"));
+    box.append(b);
+  }
+  const mount = () => document.body.append(box);
+  if (document.body) mount(); else document.addEventListener("DOMContentLoaded", mount, { once: true });
 }
 
 // Socket: one per page; subscriptions and unacknowledged requests are replayed after every reconnect.
@@ -107,7 +127,7 @@ function settle(rid, m) {
 }
 
 function ensureSocket() {
-  if (!sock.ws && !sock.retry) connect();
+  if (!sock.ws && !sock.retry && !signedOut) connect();
 }
 
 function connect() {
@@ -180,7 +200,7 @@ function lost(ws, opened) {
 }
 
 function schedule() {
-  if (sock.retry) return;
+  if (sock.retry || signedOut) return;
   sock.retry = setTimeout(connect, Math.min(15000, 500 * 2 ** sock.attempt++));
 }
 
@@ -201,7 +221,7 @@ function heartbeat() {
 }
 
 function wake() {
-  if (document.hidden) return;
+  if (document.hidden || signedOut) return;
   if (sock.open) probe(WAKE_PONG_MS);
   else if (colls.size || docs.size || ops.size) {
     sock.attempt = 0;
@@ -375,7 +395,7 @@ async function ask(input, opts, json) {
     throw hostErr(e && e.name === "AbortError" ? "cancelled" : "upstream_error");
   }
   if (r.type === "opaqueredirect" || r.status === 401) {
-    later(relogin);
+    showSignIn();
     throw hostErr("session_expired");
   }
   let body = null;
@@ -433,6 +453,8 @@ async function use(name) {
   }
   return null;
 }
+
+checkSession();
 
 try {
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});

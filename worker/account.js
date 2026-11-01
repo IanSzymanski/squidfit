@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import { MAX_AGE_S, RENEW_MS } from "./session.js";
 
 export const MAX_DOC_BYTES = 256 * 1024;
 const FRAME_BYTES = 1 << 20;
@@ -23,6 +24,7 @@ export class Account extends DurableObject {
     this.sql = ctx.storage.sql;
     this.sql.exec("CREATE TABLE IF NOT EXISTS docs (coll TEXT NOT NULL, id TEXT NOT NULL, body TEXT NOT NULL, updated INTEGER NOT NULL, PRIMARY KEY (coll, id)) WITHOUT ROWID");
     this.sql.exec("CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT NOT NULL)");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, email TEXT NOT NULL, created INTEGER NOT NULL, seen INTEGER NOT NULL) WITHOUT ROWID");
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
   }
 
@@ -185,6 +187,24 @@ export class Account extends DurableObject {
     this.sql.exec("DELETE FROM docs");
     this.sql.exec("DELETE FROM meta");
     return { ok: true };
+  }
+
+  // Sign-in sessions (see worker/session.js). A session lasts MAX_AGE_S from its last use; reset() leaves them alone.
+  openSession(email, hash, now = Date.now()) {
+    this.sql.exec("DELETE FROM sessions WHERE seen < ?", now - MAX_AGE_S * 1000);
+    this.sql.exec("INSERT OR REPLACE INTO sessions (hash, email, created, seen) VALUES (?, ?, ?, ?)", hash, email, now, now);
+  }
+
+  checkSession(hash, now = Date.now()) {
+    const row = this.sql.exec("SELECT email, seen FROM sessions WHERE hash = ?", hash).toArray()[0];
+    if (!row) return null;
+    if (row.seen < now - MAX_AGE_S * 1000) {
+      this.sql.exec("DELETE FROM sessions WHERE hash = ?", hash);
+      return null;
+    }
+    const renew = now - row.seen > RENEW_MS;
+    if (renew) this.sql.exec("UPDATE sessions SET seen = ? WHERE hash = ?", now, hash);
+    return { email: row.email, renew };
   }
 
   // Counts one AI call against today's (UTC) allowance; false once the cap is reached.

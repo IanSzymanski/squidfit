@@ -247,6 +247,30 @@ async function main() {
     assert.equal(dl.suggestedFilename(), "squid-test.csv");
   });
 
+  await test("a signed-out page offers sign-in (from Safari on the Home Screen), and signing in brings the app back", async () => {
+    const c = await browser.newContext({ viewport: { width: 375, height: 667 }, deviceScaleFactor: 2 });
+    const out = r => r.fulfill({ status: 401, contentType: "application/json", body: '{"code":"signed_out"}' });
+    const home = await c.newPage();
+    await home.addInitScript(() => Object.defineProperty(Navigator.prototype, "standalone", { get: () => true }));
+    await home.route("**/api/session", out);
+    await home.goto(ORIGIN + "/");
+    await home.locator("#signin p").waitFor({ timeout: 10000 });
+    assert.equal(await home.locator("#signin button").count(), 0, "a Home Screen app never leaves for Access");
+    await home.screenshot({ path: `${SHOTS}/signin-home-screen.png` });
+    const p = await c.newPage();
+    await p.route("**/api/session", out);
+    await p.goto(ORIGIN + "/");
+    await p.locator("#signin button").waitFor({ timeout: 10000 });
+    await p.screenshot({ path: `${SHOTS}/signin.png` });
+    await p.unroute("**/api/session");
+    await p.locator("#signin button").click();
+    await p.waitForURL(ORIGIN + "/");
+    const cookie = (await c.cookies()).find(k => k.name === "__Host-squid");
+    assert.ok(cookie && cookie.httpOnly && cookie.secure && cookie.sameSite === "Lax", "signing in set the session cookie");
+    await until("signed in", () => p.evaluate(() => !document.getElementById("signin") && !!DB && BOOTCOLLS.every(n => BOOTSEEN.has(n))), 20000);
+    await c.close();
+  });
+
   await test("pages render without errors, light and dark", async () => {
     for (const scheme of ["light", "dark"]) {
       await A.emulateMedia({ colorScheme: scheme });
