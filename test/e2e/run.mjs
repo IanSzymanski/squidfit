@@ -219,6 +219,28 @@ async function main() {
     await B.evaluate(() => { closeModal(); ADDQ = ""; goRoot("food"); });
   });
 
+  await test("a stale deleted-marker on one device does not delete a day written since", async () => {
+    await B.evaluate(() => localStorage.setItem(TOMBKEY, JSON.stringify([...TOMB.entries(), ["days/2099-03-15", Date.now() - 864e5]])));
+    await A.evaluate(() => put("days/2099-03-15", migrateDay({ d: "2099-03-15", wKg: 80, entries: [] })));
+    await B.reload();
+    await booted(B);
+    await new Promise(r => setTimeout(r, 800));
+    assert.ok((await exportAll()).days.some(d => d.d === "2099-03-15"), "the server keeps the day");
+    assert.equal(await B.evaluate(() => DAYS.has("2099-03-15") && !TOMB.has("days/2099-03-15")), true);
+  });
+
+  await test("an expired deleted-marker on the server neither hides a day nor survives a relaunch", async () => {
+    await A.evaluate(async () => {
+      await DB.doc("gone/days__2099-03-16").set({ p: "days/2099-03-16", at: Date.now() - 90 * 864e5 });
+      await put("days/2099-03-16", migrateDay({ d: "2099-03-16", wKg: 81, entries: [] }));
+    });
+    await B.reload();
+    await booted(B);
+    await new Promise(r => setTimeout(r, 800));
+    assert.equal(await B.evaluate(() => DAYS.has("2099-03-16")), true);
+    assert.equal(await B.evaluate(async () => (await DB.doc("gone/days__2099-03-16").get()).exists), false);
+  });
+
   await test("bulk upload (putMany, two workers) lands every record", async () => {
     const n = await A.evaluate(async () => {
       const items = Array.from({ length: 150 }, (_, i) => {

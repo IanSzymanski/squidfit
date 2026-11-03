@@ -31,6 +31,8 @@ Semantics the store keeps, because the app's data safety depends on them (tests 
 | HOST-8 | After a reconnect each subscription gets only the difference from what that page last saw | A dropped socket neither misses changes nor replays everything |
 | HOST-9 | Writes made while disconnected queue for 20 s, then reject `unavailable` | Short blips stay silent; long ones leave the record pending |
 
+Deletes leave a marker in `gone/` so other pages drop the record too. `gone` is subscribed before every other collection, and its first snapshot settles this device's own markers before any record arrives: a local marker the server no longer holds was cleared by a later write elsewhere and is dropped, unless its own upload never landed (`goneout`), in which case it is sent again. Markers older than 60 days are ignored and removed from the server, and any write to a path clears a server marker for it even if this device never held one.
+
 After a reconnect the host fires `squid:online` (with `detail.since`, the time the socket dropped). `18-boot.js` answers it by resending every pending write and any tombstone recorded since then. In the artifact the pending set was only flushed on a collection's first snapshot, once per launch; a socket that drops and heals mid-session needs a second trigger.
 
 ## Wire protocol

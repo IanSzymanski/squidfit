@@ -797,12 +797,34 @@ const TOMBKEY = LSPREFIX + "gone";
 
 const tombId = path => path.replace(/\//g, "__");
 
+const TOMBOUT = new Set;
+
+const TOMBOUTKEY = LSPREFIX + "goneout";
+
+const SRVGONE = new Set;
+
 function tombLoad() {
  try {
   const raw = localStorage.getItem(TOMBKEY);
   if (raw) JSON.parse(raw).forEach(([p, at]) => TOMB.set(p, at));
+  const out = localStorage.getItem(TOMBOUTKEY);
+  if (out) JSON.parse(out).forEach(p => TOMB.has(p) && TOMBOUT.add(p));
  } catch (e) {}
  tombPrune();
+}
+
+async function tombSend(path, at) {
+ try {
+  await DB.doc("gone/" + tombId(path)).set({
+   p: path,
+   at: at
+  });
+ } catch (e) {
+  return false;
+ }
+ SRVGONE.add(path);
+ if (TOMBOUT.delete(path)) tombWrite();
+ return true;
 }
 
 function tombPrune() {
@@ -811,6 +833,7 @@ function tombPrune() {
  TOMB.forEach((at, p) => {
   if (at < cutoff) {
    TOMB.delete(p);
+   TOMBOUT.delete(p);
    cut = true;
   }
  });
@@ -820,6 +843,7 @@ function tombPrune() {
 function tombWrite() {
  try {
   localStorage.setItem(TOMBKEY, JSON.stringify([ ...TOMB.entries() ]));
+  if (TOMBOUT.size) localStorage.setItem(TOMBOUTKEY, JSON.stringify([ ...TOMBOUT ])); else localStorage.removeItem(TOMBOUTKEY);
  } catch (e) {}
 }
 
@@ -836,8 +860,13 @@ async function put(path, doc, quiet) {
  const n = ++PENDSEQ;
  PENDING.set(path, n);
  if (!quiet) pendWrite();
- if (TOMB.delete(path)) {
+ const tombed = TOMB.delete(path);
+ if (tombed) {
+  TOMBOUT.delete(path);
   tombWrite();
+ }
+ if (tombed || SRVGONE.has(path)) {
+  SRVGONE.delete(path);
   if (DB) {
    try {
     await DB.doc("gone/" + tombId(path)).delete();
@@ -862,15 +891,11 @@ async function del(path) {
  if (MOCK) return;
  const at = Date.now(), n = ++WSEQ;
  TOMB.set(path, at);
+ TOMBOUT.add(path);
  tombWrite();
  if (PENDING.delete(path)) pendWrite();
  if (!DB) return;
- try {
-  await DB.doc("gone/" + tombId(path)).set({
-   p: path,
-   at: at
-  });
- } catch (e) {}
+ await tombSend(path, at);
  if ((WROTE.get(path) || {
   n: 0
  }).n > n) {
