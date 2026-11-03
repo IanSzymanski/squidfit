@@ -1414,6 +1414,7 @@ function plateCommit(iso) {
   items: [],
   t: null
  };
+ lsSave("plate");
  saveDay(day);
  return n;
 }
