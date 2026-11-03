@@ -9,6 +9,7 @@
     "test": "npm run build && vitest run --max-workers=1 --no-isolate",
     "test:e2e": "npm run build && node test/e2e/run.mjs",
     "import:artifact": "node scripts/import-artifact.mjs",
+    "screenshots": "npm run build && node scripts/screenshots.mjs",
     "deploy": "npm run build && wrangler deploy --env= --var BUILD:$(cat build/BUILD)",
     "deploy:qa": "npm run build && wrangler deploy --env qa --var BUILD:$(cat build/BUILD)"
   },
