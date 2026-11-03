@@ -159,16 +159,37 @@ function syncColl(name, map, mig, idOf, save) {
 }
 
 function syncTombs() {
+ let first = true;
  DB.collection("gone").onSnapshot(snap => {
   let moved = 0;
-  snap.docChanges().forEach(ch => {
+  const changes = snap.docChanges(), cutoff = Date.now() - TOMB_DAYS * 864e5;
+  if (first) {
+   first = false;
+   const held = new Set(changes.map(ch => (ch.doc.data() || {}).p));
+   TOMB.forEach((at, path) => {
+    if (held.has(path)) return;
+    if (!TOMBOUT.has(path)) {
+     TOMB.delete(path);
+     moved++;
+    } else tombSend(path, at).then(ok => ok && DB.doc(path).delete()).catch(() => {});
+   });
+  }
+  changes.forEach(ch => {
    const d = ch.doc.data();
    const path = d && d.p;
    if (!path) return;
    if (ch.type === "removed") {
+    SRVGONE.delete(path);
     if (TOMB.delete(path)) moved++;
     return;
    }
+   if ((d.at || 0) < cutoff) {
+    SRVGONE.delete(path);
+    if (TOMB.delete(path)) moved++;
+    DB.doc("gone/" + ch.doc.id).delete().catch(() => {});
+    return;
+   }
+   SRVGONE.add(path);
    if (TOMB.get(path) === d.at) return;
    if ((WROTE.get(path) || {
     t: 0
@@ -307,6 +328,7 @@ async function db2(db) {
   renderSoon();
   if (S.onboarded === false) openOnboarding();
  }, () => {});
+ syncTombs();
  syncColl("days", DAYS, migrateDay, d => d.d);
  syncColl("foods", FOODS, migrateFood, f => f.id);
  syncColl("recipes", RECIPES, null, r => r.id);
@@ -316,15 +338,11 @@ async function db2(db) {
  syncColl("wplans", WPLANS, null, p => p.id);
  syncColl("workouts", WORKOUTS, null, w => w.id);
  syncColl("photos", PHOTOS, null, p => p.d, photoSave);
- syncTombs();
  pendFlush("pix");
  window.addEventListener("squid:online", ev => {
   const since = ev.detail && ev.detail.since || 0;
   TOMB.forEach((at, path) => {
-   if (at >= since) DB.doc("gone/" + tombId(path)).set({
-    p: path,
-    at: at
-   }).then(() => DB.doc(path).delete()).catch(() => {});
+   if (at >= since || TOMBOUT.has(path)) tombSend(path, at).then(ok => ok && DB.doc(path).delete()).catch(() => {});
   });
   [ ...Object.keys(COLLMAP), "settings", "pix" ].forEach(c => pendFlush(c));
  });
