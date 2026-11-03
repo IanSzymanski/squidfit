@@ -198,6 +198,27 @@ async function main() {
     assert.equal(await B.evaluate(() => DAYS.has("2099-01-01")), false);
   });
 
+  await test("logging the plate empties it, and it stays empty after relaunch", async () => {
+    await B.evaluate(() => {
+      plateAdd({ id: uid(), name: "Plate test", kcal: 100, p: 1, c: 1, f: 1, qty: 100, unit: "g", g: 100, t: "12:00" });
+      lsFlush();
+      plateCommit("2099-02-02");
+      lsFlush();
+    });
+    assert.deepEqual(await B.evaluate(() => JSON.parse(localStorage.getItem(LSPREFIX + "plate")).items), []);
+    await B.reload();
+    await booted(B);
+    assert.equal(await B.evaluate(() => PLATE.items.length), 0);
+    assert.equal(await B.evaluate(() => DAYS.get("2099-02-02").entries.length), 1);
+  });
+
+  await test("the add-food page opens a new food from the search text", async () => {
+    await B.evaluate(() => { ADDQ = "Plate test bar"; go("addfood"); });
+    await B.locator("#p-addfood .addtools button", { hasText: "New food" }).click();
+    await until("food editor", () => B.evaluate(() => [...document.querySelectorAll("input")].some(i => i.value === "Plate test bar")));
+    await B.evaluate(() => { closeModal(); ADDQ = ""; goRoot("food"); });
+  });
+
   await test("bulk upload (putMany, two workers) lands every record", async () => {
     const n = await A.evaluate(async () => {
       const items = Array.from({ length: 150 }, (_, i) => {

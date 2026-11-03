@@ -494,6 +494,11 @@ VIEWS.addfood = function viewAddFood() {
  }), el("button", {
   class: "btn sm",
   type: "button",
+  text: "New food",
+  onclick: () => openFoodEditor(null, st.q, f => openAmount(f))
+ }), el("button", {
+  class: "btn sm",
+  type: "button",
   text: "Recipes",
   onclick: () => openRecipeMenu()
  }), AI ? el("button", {
