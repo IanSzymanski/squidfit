@@ -1,6 +1,47 @@
 # Squid
 
-A personal tracker for bodyweight, food, cardio and strength, built for a phone's home screen. It runs on Cloudflare: one Worker serves the app and a small API, and each account's records live in its own Durable Object, synced live to every open device over a WebSocket. See [docs/architecture.md](docs/architecture.md).
+A personal tracker for bodyweight, food, cardio and strength, built to live on a phone's home screen. Log what you eat and how you train in a few taps, and Squid works out what it adds up to: your weight trend, what you actually burn, and how each week compares with the last.
+
+<p>
+  <img src="docs/screenshots/dash-light.png" width="250" alt="Dashboard: 7-day median weight, today's calories and macros, weight trend, expenditure, riding, strength, body parts and logging cards">
+  <img src="docs/screenshots/food-dark.png" width="250" alt="Food log in dark mode: the day hour by hour with each meal's calories and macros">
+  <img src="docs/screenshots/weight-light.png" width="250" alt="Weight page: daily weigh-ins as dots under a smoothed trend line">
+</p>
+<p>
+  <img src="docs/screenshots/energy-light.png" width="250" alt="Expenditure page: daily intake bars against estimated expenditure">
+  <img src="docs/screenshots/workouts-dark.png" width="250" alt="Workouts page in dark mode: the week, a start button and recent rides and lifting sessions">
+  <img src="docs/screenshots/together-dark.png" width="250" alt="Week by week: intake, weight, volume, riding hours and riding intensity lined up on calendar weeks">
+</p>
+
+<sub>Screenshots use the app's built-in sample data. Regenerate them with `npm run screenshots`.</sub>
+
+## What it does
+
+**Food.** The log is the day laid out hour by hour, with each meal's calories, protein, carbs and fat beside it. Search puts the foods you log most first, so two letters usually find your staples. Build a meal on the plate and log it in one go, or use Quick add for a bare calorie number. Keep your own foods and recipes, and track alcohol separately from the three macros.
+
+**Bodyweight.** Daily weigh-ins sit under a 7-day median, so one salty dinner doesn't move the number you look at. The weight dial centres on your own recent readings, and a reading far from them asks you to check it before saving.
+
+**Expenditure.** Squid estimates what you burn from what you ate and how your weight moved over the same weeks. No step counts, no activity multipliers. The longer you log, the better the estimate.
+
+**Training.** Strength sessions run from your own workouts and exercises, grouped by body part, with a body-parts card showing what you trained this week. Pick the metric that matches how you train: effective reps, volume, load over time, or sessions only. Cardio covers rides, runs, rows, swims and walks, each tracking the metrics you choose (distance, heart rate, power, MET), with energy worked out from power or MET and bodyweight.
+
+**Weekly view.** Week by week lines intake, weight, training and cardio up on calendar weeks across 12 weeks, 26 or a year. The weekly summary reads back the last seven days, and the logging page shows which days have food and weigh-ins.
+
+**Progress photos.** Front, side and back photos per session, kept with the rest of your record.
+
+**Claude, optional.** With an Anthropic API key configured, describe a meal in words or speech and it lands on the plate, look up a packaged food you don't have, generate a recipe, or get a written read of your week. Without a key these controls stay hidden.
+
+**Shaped around you.** Onboarding takes about a minute: switch food, bodyweight, strength and cardio on or off, pick your units (kg or lb, km or miles, kcal or kJ) and your first day of the week. Anything you don't track disappears from the tabs, the dashboard and Settings. Hold a section to reorder or hide it, and restyle the whole app in the theme editor.
+
+**Your data.** Every change syncs live to every open device and stays readable offline. Full backups download as one file and restore with Replace or Add what's missing. MacroFactor exports and generic CSVs import, and the log exports as CSV.
+
+## Who it's for
+
+One person who wants their numbers in one place: someone cutting, maintaining or gaining who wants to know what they burn instead of guessing, a lifter who also rides or runs, or anyone moving off MacroFactor who wants their history to come with them. There is no coaching, no social feed and no streak nagging. It shows what happened and leaves the decisions to you.
+
+## How it runs
+
+One Cloudflare Worker serves the app and a small API. Each account's records live in their own Durable Object and sync live to every open device over a WebSocket. Sign-in goes through Cloudflare Access once, then Squid's own session keeps a Home Screen app signed in for 400 days from its last use. AI calls go through the Worker, so the API key never reaches the browser. See [docs/architecture.md](docs/architecture.md), and [docs/roadmap.md](docs/roadmap.md) for what comes next.
 
 ## Develop
 
@@ -12,6 +53,7 @@ printf 'ENV=dev\nDEV_EMAIL=you@example.com\n' > .dev.vars   # local sign-in; nev
 npm run dev                                                  # http://localhost:8787
 npm test                                                     # Worker tests (workerd)
 npm run test:e2e                                             # Chromium against wrangler dev, synthetic data
+npm run screenshots                                          # README screenshots from the app's sample data
 ```
 
 ## First deploy
@@ -44,5 +86,6 @@ src/index.html  page template
 worker/         Worker routes, sign-in (Access, then Squid's session), AI proxy, Account Durable Object
 public/         manifest, icons, _headers
 test/           worker tests and end-to-end
-scripts/        build, artifact import
+scripts/        build, artifact import, README screenshots
+docs/           architecture, roadmap, screenshots, artifact-era history
 ```
