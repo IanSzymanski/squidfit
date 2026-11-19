@@ -63,7 +63,7 @@ function toastUndo(m, undo) {
 
 let MODALS = [];
 
-function openModal({title: title, body: body, footer: footer, save: save, guard: guard, onClosed: onClosed, focus: focus}) {
+function openModal({title: title, body: body, footer: footer, save: save, guard: guard, onClosed: onClosed, focus: focus, head: head, cls: cls}) {
  const prevFocus = document.activeElement;
  const scrim = el("div", {
   class: "scrim",
@@ -72,7 +72,7 @@ function openModal({title: title, body: body, footer: footer, save: save, guard:
   "aria-label": title
  });
  const sheet = el("div", {
-  class: "sheet",
+  class: "sheet" + (cls ? " " + cls : ""),
   tabindex: "-1"
  });
  sheet.appendChild(el("header", {}, [ el("button", {
@@ -87,7 +87,7 @@ function openModal({title: title, body: body, footer: footer, save: save, guard:
   text: title
  }), el("span", {
   class: "sp"
- }) ]));
+ }), head || null ].filter(Boolean)));
  const bd = el("div", {
   class: "bd"
  });

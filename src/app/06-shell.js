@@ -438,7 +438,13 @@ function openAdd() {
  paint(false);
  openModal({
   title: "Add",
-  body: [ host ]
+  body: [ host ],
+  head: el("button", {
+   class: "btn sm icon",
+   type: "button",
+   "aria-label": "Pinned photo",
+   onclick: openPinPhoto
+  }, [ icon("image") ])
  });
 }
 

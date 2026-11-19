@@ -786,6 +786,11 @@ body.onboarding{overflow:hidden}
 .sheet footer .btn{flex:1}
 .sheet footer .btn.full{flex:1 0 100%}
 .sheet footer .btn.icon{flex:0 0 auto}
+.scrim:has(>.sheet.full){padding-top:0}
+.sheet.full{max-width:none;height:100%;border:0}
+.sheet.full header{padding-top:calc(9px * var(--density) + var(--safe-top))}
+.sheet.full .bd{flex:1;padding:0;background:var(--photo-bg)}
+.pinimg{flex:1;min-height:0;width:100%;object-fit:contain;display:block}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(72px + env(safe-area-inset-bottom));
   z-index:70;background:var(--ink);color:var(--bg);padding:calc(9px * var(--density)) var(--s5);font-size:var(--fs-sm);width:max-content;max-width:88vw;
   text-align:center;display:flex;align-items:center;gap:calc(12px * var(--density))}

@@ -365,6 +365,7 @@ const ICONS = {
  drop: '<svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4.5 20.5h15"/></svg>',
  dumbbell: '<svg viewBox="0 0 24 24"><path d="M2.5 9.5v5M5.5 7v10M18.5 7v10M21.5 9.5v5M8.5 8.5v7M15.5 8.5v7M8.5 12h7"/></svg>',
  search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M15.8 15.8L20.5 20.5"/></svg>',
+ image: '<svg viewBox="0 0 24 24"><path d="M3 5h18v14H3z"/><path d="M3 16.5l5-5 4 4 3-3 6 6"/><circle cx="15.5" cy="9" r="1.6"/></svg>',
  cam: '<svg viewBox="0 0 24 24"><path d="M3 8.5h3.5L8 6h8l1.5 2.5H21v11H3z"/><circle cx="12" cy="13.5" r="3.5"/></svg>',
  wide: '<svg viewBox="0 0 24 24"><path d="M3 7v10M21 7v10"/><path d="M6 12h12"/><path d="M9 9l-3 3 3 3M15 9l3 3-3 3"/></svg>',
  narrow: '<svg viewBox="0 0 24 24"><path d="M3 7v10M21 7v10"/><path d="M6 12h12"/><path d="M9 9l3 3-3 3M15 9l-3 3 3 3"/></svg>'
