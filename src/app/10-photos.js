@@ -692,3 +692,106 @@ VIEWS.photos = function viewPhotos() {
  });
  root.appendChild(stream);
 };
+
+const PINMAX = 1800;
+
+function fitWhole(bmp) {
+ const iw = bmpW(bmp), ih = bmpH(bmp), k = Math.min(1, PINMAX / Math.max(iw, ih));
+ const w = Math.round(iw * k), h = Math.round(ih * k), r = {
+  x: 0,
+  y: 0,
+  w: iw,
+  h: ih
+ };
+ let q = .8, img = renderCrop(bmp, r, w, h, q), s = 1;
+ while (img.length > PIXCAP && (q > .4 || s > .4)) {
+  if (q > .4) q -= .08; else s *= .85;
+  img = renderCrop(bmp, r, Math.round(w * s), Math.round(h * s), q);
+ }
+ return {
+  img: img,
+  w: Math.round(w * s),
+  h: Math.round(h * s)
+ };
+}
+
+function openPinPhoto() {
+ const pin = S.pinPhoto;
+ const status = el("div", {});
+ const file = el("input", {
+  type: "file",
+  accept: "image/*",
+  class: "hide"
+ });
+ file.addEventListener("change", async () => {
+  const f = file.files && file.files[0];
+  if (!f) return;
+  status.innerHTML = "";
+  status.appendChild(el("div", {
+   class: "box pad bar"
+  }, [ el("span", {
+   class: "spin"
+  }), el("span", {
+   class: "small muted",
+   text: "Opening …"
+  }) ]));
+  let bmp;
+  try {
+   bmp = await loadBitmap(f);
+  } catch (e) {
+   status.innerHTML = "";
+   status.appendChild(el("div", {
+    class: "note",
+    text: "That file couldn't be read as an image."
+   }));
+   return;
+  }
+  const out = fitWhole(bmp);
+  const id = "px" + uid(), prev = S.pinPhoto;
+  await pixPut(id, out.img);
+  S.pinPhoto = {
+   id: id,
+   w: out.w,
+   h: out.h,
+   ts: Date.now()
+  };
+  saveSettings();
+  if (prev && prev.id) pixDel(prev.id);
+  closeModal();
+  openPinPhoto();
+ });
+ const pick = el("button", {
+  class: "btn" + (pin ? "" : " wide"),
+  type: "button",
+  onclick: () => file.click()
+ }, [ icon("image"), el("span", {
+  text: pin ? "Replace" : "Choose a photo"
+ }) ]);
+ if (!pin) {
+  openModal({
+   title: "Pinned photo",
+   body: [ pick, file, status ]
+  });
+  return;
+ }
+ const im = el("img", {
+  class: "pinimg",
+  alt: "Pinned photo"
+ });
+ pixGet(pin.id).then(src => {
+  if (src) im.src = src;
+ });
+ openModal({
+  title: "Pinned photo",
+  cls: "full",
+  body: [ im, file, status ],
+  footer: [ pick, holdButton("Delete", () => {
+   const gone = S.pinPhoto;
+   S.pinPhoto = null;
+   saveSettings();
+   if (gone) pixDel(gone.id);
+   closeModal();
+   toast("Photo deleted");
+  }) ]
+ });
+}

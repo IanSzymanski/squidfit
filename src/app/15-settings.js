@@ -1981,6 +1981,7 @@ function photoIds() {
  PHOTOS.forEach(rec => Object.values(rec.shots || {}).forEach(sh => {
   if (sh && sh.id) out.push(sh.id);
  }));
+ if (S.pinPhoto) out.push(S.pinPhoto.id);
  return out;
 }
 

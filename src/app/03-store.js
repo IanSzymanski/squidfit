@@ -154,6 +154,15 @@ const OPTS = [ {
   return undefined;
  }
 }, {
+ key: "pinPhoto",
+ def: null,
+ read: v => isObj(v) && typeof v.id === "string" ? {
+  id: v.id,
+  w: +v.w || 0,
+  h: +v.h || 0,
+  ts: +v.ts || 0
+ } : null
+}, {
  key: "tdeeWeeks",
  def: 3,
  read: v => v ? v : undefined
